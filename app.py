@@ -21,11 +21,6 @@ except Exception:
     )
     st.stop()
 
-# Optional LangSmith
-if "LANGCHAIN_API_KEY" in st.secrets:
-    os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
-    os.environ["LANGCHAIN_TRACING_V2"] = "true"
-    os.environ["LANGCHAIN_PROJECT"] = "OpenAI GenAI Q&A"
 
 
 prompt = ChatPromptTemplate.from_messages(
