@@ -1,63 +1,88 @@
+import os
 import streamlit as st
-import openai
+
 from langchain_openai import ChatOpenAI
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-import os
+from langchain_core.output_parsers import StrOutputParser
 
-import os
-from dotenv import load_dotenv
-load_dotenv()
+st.set_page_config(
+    page_title="OpenAI GenAI Q&A",
+    page_icon="🤖",
+)
 
-## Langsmith Tracking
-os.environ["LANGCHAIN_API_KEY"]=os.getenv("LANGCHAIN_API_KEY")
-os.environ["LANGCHAIN_TRACING_V2"]="true"
-os.environ["LANGCHAIN_PROJECT"]="Simple Q&A Chatbot With OPENAI"
+st.title("🤖 OpenAI GenAI End-to-End Q&A")
+st.write("Ask any question using OpenAI GPT models.")
 
-## Prompt Template
-prompt=ChatPromptTemplate.from_messages(
+try:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+except Exception:
+    st.error(
+        "OPENAI_API_KEY not found. Add it in Streamlit Cloud → App Settings → Secrets."
+    )
+    st.stop()
+
+# Optional LangSmith
+if "LANGCHAIN_API_KEY" in st.secrets:
+    os.environ["LANGCHAIN_API_KEY"] = st.secrets["LANGCHAIN_API_KEY"]
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_PROJECT"] = "OpenAI GenAI Q&A"
+
+
+prompt = ChatPromptTemplate.from_messages(
     [
-        ("system","You are a helpful massistant . Please  repsonse to the user queries"),
-        ("user","Question:{question}")
+        (
+            "system",
+            "You are a helpful AI assistant. Answer the user's questions clearly and accurately.",
+        ),
+        ("user", "{question}"),
     ]
 )
 
-def generate_response(question,api_key,engine,temperature,max_tokens):
-    openai.api_key=api_key
+st.sidebar.header("Model Settings")
 
-    llm=ChatOpenAI(model=engine)
-    output_parser=StrOutputParser()
-    chain=prompt|llm|output_parser
-    answer=chain.invoke({'question':question})
-    return answer
+model = st.sidebar.selectbox(
+    "Choose Model",
+    [
+        "gpt-4o-mini",
+        "gpt-4.1-mini",
+        "gpt-4o",
+        "gpt-4.1",
+    ],
+)
 
-## #Title of the app
-st.title("Enhanced Q&A Chatbot With OpenAI")
+temperature = st.sidebar.slider(
+    "Temperature",
+    0.0,
+    1.0,
+    0.7,
+)
 
-
-
-## Sidebar for settings
-st.sidebar.title("Settings")
-api_key=st.sidebar.text_input("Enter your Open AI API Key:",type="password")
-
-## Select the OpenAI model
-engine=st.sidebar.selectbox("Select Open AI model",["gpt-4o","gpt-4-turbo","gpt-4"])
-
-## Adjust response parameter
-temperature=st.sidebar.slider("Temperature",min_value=0.0,max_value=1.0,value=0.7)
-max_tokens = st.sidebar.slider("Max Tokens", min_value=50, max_value=300, value=150)
-
-## MAin interface for user input
-st.write("Goe ahead and ask any question")
-user_input=st.text_input("You:")
-
-if user_input and api_key:
-    response=generate_response(user_input,api_key,engine,temperature,max_tokens)
-    st.write(response)
-
-elif user_input:
-    st.warning("Please enter the OPen AI aPi Key in the sider bar")
-else:
-    st.write("Please provide the user input")
+max_tokens = st.sidebar.slider(
+    "Max Tokens",
+    50,
+    500,
+    200,
+)
 
 
+question = st.text_input("Enter your question")
+
+if st.button("Generate Response"):
+
+    if question.strip():
+
+        llm = ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+
+        chain = prompt | llm | StrOutputParser()
+
+        with st.spinner("Generating..."):
+            response = chain.invoke({"question": question})
+
+        st.success(response)
+
+    else:
+        st.warning("Please enter a question.")
